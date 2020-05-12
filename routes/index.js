@@ -3,11 +3,23 @@ const express = require("express"),
       router = express.Router(),
       async = require("async"),
       nodemailer = require("nodemailer"),
-      crypto = require("crypto");
+      crypto = require("crypto"),
+      { google } = require("googleapis"),
+      OAuth2 = google.auth.OAuth2;
 
 const User = require("../models/user"),
       Campground = require("../models/campground");
+const oauth2Client = new OAuth2(
+    process.env.CLIENTID,
+    process.env.CLIENTSECRET,
+    "https://developers.google.com/oauthplayground"
+);
 
+oauth2Client.setCredentials({
+    refresh_token: process.env.REFRESHTOKEN
+});
+
+const accessToken = oauth2Client.getAccessToken();
 //root route
 router.get("/", (req, res) => {
     res.render("landing");
@@ -68,140 +80,180 @@ router.get("/logout", (req, res) => {
     res.redirect("/login");
 })
 
-//show forgot-password form
+//show a forgot-password form
 router.get("/forgot", (req, res) => {
    res.render("users/forgot"); 
 });
 
-//handle forgot password 
+//handle forgot password logic 
 router.post("/forgot", (req, res, next) => {
-     new Promise((resolve, reject) =>{
-                const testAccount = nodemailer.createTestAccount();
-                resolve(testAccount);
-            }).then((testAccount)=>{
-                   const smtpTransport = nodemailer.createTransport({
-                   host: "smtp.ethereal.email",
-                    port: 587,
-                    secure: false, // true for 465, false for other ports
-                    auth: {
-                      user: testAccount.user, // generated ethereal user
-                      pass: testAccount.pass // generated ethereal password
+    async.waterfall([
+        (done) => {
+            crypto.randomBytes(20, (err, buf) => {
+                const token = buf.toString('hex');
+                done(err, token);
+            });
+        },
+        (token, done) => {
+            User.findOne({ email: req.body.email }, (err, user) => {
+                if(err) {
+                  console.error(err);
+                  req.flash("error", "Something went wrong.");
+                  res.redirect("/campgrounds");
+                }
+                if (!user) {
+                    req.flash('error', 'No account with that email address exists.');
+                    return res.redirect('/forgot');
+                }
+                
+                user.resetPasswordToken = token;
+                user.resetPasswordExpires = Date.now() + 600000; // 10 minutes 
+    
+                user.save((err) => {
+                    if(err) {
+                        console.error(err);
+                        res.redirect("/campgrounds");
                     }
-                 });
-                 
-                  const mailOptions = {
-                from: testAccount.user,
-                to: "zhaochaohuang8@gmail.com",
+                    done(err, token, user);
+                });
+            });
+        },
+        (token, user, done) => {
+             const transporter = nodemailer.createTransport({
+                 service: "gmail",
+                 auth: {
+                      type: "OAuth2",
+                      user: process.env.GMAILACCOUNT, 
+                      clientId: process.env.CLIENTID,
+                      clientSecret: process.env.CLIENTSECRET,
+                      refreshToken: process.env.REFRESHTOKEN,
+                      accessToken: accessToken
+                 },
+                logger: true,
+                debug: false // include SMTP traffic in the logs
+            });
+            const mailOptions = {
+                from: process.env.GMAILACCOUNT,
+                to: user.email,
                 subject: "Node.js Password Reset",
-                text: "Hallo"
+                generateTextFromHTML: true,
+                html: "<p>You are receiving this because you (or someone else) have requested the reset of the password for your account.</p>"+
+                      "<p>Please click on the following link, or paste this into your browser to complete the process:</p>"+
+                      `<a href='http://${req.headers.host}/reset/${token}'>Click this link to reset your password</a>`+
+                      "<p>If you did not request this, please ignore this email and your password will remain unchanged.</p>"
              };
-            smtpTransport.sendMail(mailOptions, (err) => {
+            transporter.sendMail(mailOptions, (err, info) => {
                 if(err) console.log(err);
                 else console.log("mail sent"); 
+                console.log(info);
+                done(err, "Check your email to reset your password");
             })
-            }).catch((err) => {
-                console.log(err);
-            }).finally(()=> {
-                res.send("done");
-            });
-    // async.waterfall([
-    //     (done)=> {
-    //         new Promise((resolve, reject) =>{
-    //             const testAccount = nodemailer.createTestAccount();
-    //             resolve(testAccount);
-    //         }).then((testAccount)=>{
-    //              const smtpTransport = nodemailer.createTransport({
-    //           host: "smtp.ethereal.email",
-    //             port: 587,
-    //             secure: false, // true for 465, false for other ports
-    //             auth: {
-    //               user: testAccount.user, // generated ethereal user
-    //               pass: testAccount.pass // generated ethereal password
-    //             }
-    //         });  
-    //         }).catch((err) => {
-    //             console.log(err);
-    //         });
-    //     },
-        // (testAccount, done) =>{
-        //      const smtpTransport = nodemailer.createTransport({
-        //       host: "smtp.ethereal.email",
-        //         port: 587,
-        //         secure: false, // true for 465, false for other ports
-        //         auth: {
-        //           user: testAccount.user, // generated ethereal user
-        //           pass: testAccount.pass // generated ethereal password
-        //         }
-        //     });  
-        //     done(null, smtpTransport, testAccount);
-        // },
-        // (smtpTransport, testAccount, done) => {
-        //   const mailOptions = {
-        //         from: testAccount.user,
-        //         to: "ligoh50305@beiop.com",
-        //         subject: "Node.js Password Reset",
-        //         text: "Hallo"
-        //      };
-        //     smtpTransport.sendMail(mailOptions, (err) => {
-        //         if(err) console.log(err);
-        //         else console.log("mail sent"); 
-        //     })
-        //     done(null, "done");
-        // }
-        // ], (err, results) => {
-        //      if(err) return next(err);
-        //      res.send("done");
-        //      res.redirect("/forgot");
-        // });
-    
-    // async.waterfall([
-        // (done) => {
-        //   crypto.randomBytes(20, (err, buf) => {
-        //      const token = buf.toString("hex");
-        //      done(err, token);
-        //   });  
-        // },  
-        // (token, done) => {
-        //     User.findOne({email: req.body.email}, (err, user) => {
-        //         if(!user) {
-        //             req.flash("error", "No account with that email address exists.");
-        //             return res.redirect("/forgot");
-        //         }
-        //         user.resetPasswordToken = token;
-        //         user.resetPasswordExpires = Date.now() + 600000;
-        //         user.save((err) =>{
-        //           done(err, token, user); 
-        //         });
-        //     });
-        // },
-    //     (token, user, done) =>{
-    //         const smtpTransport = nodemailer.createTransport({
-    //             service: "Gmail",
-    //             auth: {
-    //                 user: process.env.GMAILACCOUNT,
-    //                 pass: process.env.GMAILPW
-    //             }
-    //         });  
-    //         const mailOptions = {
-    //             to: user.email,
-    //             from: process.env.GMAILACCOUNT,
-    //             subject: "Node.js Password Reset",
-    //             text: `You are receiving this because you (or someone else) have requested the reset of the password\n
-    //                 Please click on the following link or paste this into your browser to complete the process\n
-    //                 http://${req.headers.host}/reset/${token}\n\n
-    //                 if you did not request this, please ignore this email and your password will remain unchanged.`,
-    //         };
-    //         smtpTransport.sendMail(mailOptions, (err) => {
-    //             console.log("mail sent");
-    //             req.flash("success", "An e-mail has been sent to "+ user.email + " with further instructions.");
-    //             done(err, "done");
-    //         })
-    //     }
-    // ], (err) => {
-    //   if(err) return next(err);
-    //   res.redirect("/forgot");
-    // }); 
+        }
+  ], (err, info) => {
+    if (err) return next(err);
+    req.flash("success", info);
+    res.redirect('/campgrounds');
+  });
 });
+
+
+//show reset page 
+router.get('/reset/:token', (req, res) =>{
+    User.findOne({ resetPasswordToken: req.params.token, resetPasswordExpires: { $gt: Date.now() } }, (err, user) =>{
+        if(err) {
+            console.error(err);
+            req.flash("error", "Something went wrong.");
+            res.redirect("campgrounds");
+        }
+        if(!user) {
+            req.flash('error', 'Password reset token is invalid or has expired.');
+            return res.redirect('/forgot');
+        }
+        res.render('users/reset', {token: req.params.token});
+    });
+});
+
+//handle reset logic 
+router.post('/reset/:token', (req, res) => {
+    async.waterfall([
+        (done)=> {
+            User.findOne({ resetPasswordToken: req.params.token, resetPasswordExpires: { $gt: Date.now() } }, (err, user) => {
+                if(err) {
+                    console.error(err);
+                    req.flash("error","Something went wrong.");
+                }
+                if (!user) {
+                    req.flash('error', 'Password reset token is invalid or has expired.');
+                    return res.redirect('back');
+                }
+                
+                if(req.body.password === req.body.confirm) {
+                    user.setPassword(req.body.password, (err) => {
+                        if(err) {
+                            console.error(err);
+                            req.flash("error", "Something went wrong.");
+                            res.redirect("campgrounds");
+                        }
+                        user.resetPasswordToken = undefined;
+                        user.resetPasswordExpires = undefined;
+    
+                        user.save((err) => {
+                            if(err) {
+                                console.error(err);
+                                req.flash("Something went wrong.");
+                                res.redirect("campgrounds");
+                            }
+                            req.logIn(user, (err) => {
+                                done(err, user);
+                            });
+                        });
+                    })
+                } else {
+                    req.flash("error", "Passwords do not match.");
+                    return res.redirect('back');
+                }
+            });
+        },
+        (user, done) => {
+            const transporter = nodemailer.createTransport({
+                 service: "gmail",
+                 auth: {
+                      type: "OAuth2",
+                      user: process.env.GMAILACCOUNT, 
+                      clientId: process.env.CLIENTID,
+                      clientSecret: process.env.CLIENTSECRET,
+                      refreshToken: process.env.REFRESHTOKEN,
+                      accessToken: accessToken
+                 },
+                logger: true,
+                debug: false // include SMTP traffic in the logs
+            });
+            const mailOptions = {
+                    from: process.env.GMAILACCOUNT,
+                    to: user.email,
+                    subject: "Your password has been changed",
+                    generateTextFromHTML: true,
+                    html: "<p>Hello,</p><br>"+
+                    `<p>This is a confirmation that the password for your account ${user.email} has just been changed.`
+                 };
+                transporter.sendMail(mailOptions, (err, info) => {
+                    if(err) console.log(err);
+                    console.log(info);
+                    done(err, "Success! Your password has been changed.");
+                })
+        }
+  ], function(err, info) {
+      if(err) {
+          console.error(err);
+          req.flash("error", "Something went wrong.");
+          req.redirect("campgrounds");
+      }
+      req.flash("success", info);
+      res.redirect('/campgrounds');
+  });
+});
+
+
 //user profile route 
 router.get("/users/:id", (req, res) => {
    User.findById(req.params.id, (err, foundUser) => {

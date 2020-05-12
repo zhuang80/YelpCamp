@@ -29,6 +29,18 @@
                 <a href="/campgrounds">Home</a>
             </li>
           </ul>
+          <form action="/campgrounds" method="GET" class="navbar-form navbar-left"> 
+            <div class="form-group">
+                <select class="form-control drop" name="searchType">
+                    <option selected value="name">Name</option>
+                    <option value="author">Author</option>
+                </select>
+            </div>
+            <div class="form-group">  
+                <input class="form-control" type="text" name="search" placeholder="search">
+            </div>
+            <button type="submit" class="btn btn-default">Search</button>
+          </form>
           <ul class="nav navbar-nav navbar-right">
               <% if(!currentUser){ %>
                   <li class="<%= typeof page !== 'undefined' && page === 'login' ? 'active' : '' %>">

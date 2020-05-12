@@ -2,31 +2,75 @@ const express = require("express");
 const router = express.Router();
 const Campground = require("../models/campground");
 const middleware = require("../middleware");
-var NodeGeocoder = require('node-geocoder');
- 
-var options = {
+const NodeGeocoder = require('node-geocoder');
+const multer = require("multer");
+
+const storage = multer.diskStorage({
+  filename: function(req, file, callback) {
+    callback(null, Date.now() + file.originalname);
+  }
+});
+const imageFilter = function (req, file, cb) {
+    // accept image files only
+    if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/i)) {
+        return cb(new Error('Only image files are allowed!'), false);
+    }
+    cb(null, true);
+};
+const upload = multer({ storage: storage, fileFilter: imageFilter})
+
+const cloudinary = require('cloudinary');
+cloudinary.config({ 
+  cloud_name: 'dcrw32w2w', 
+  api_key: process.env.CLOUDINARY_API_KEY, 
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+const options = {
   provider: 'google',
   httpAdapter: 'https',
   apiKey: process.env.GEOCODER_API_KEY,
   formatter: null
 };
  
-var geocoder = NodeGeocoder(options);
+const geocoder = NodeGeocoder(options);
 
 //INDEX ROUTE
 router.get("/", (req, res) => {
-    
-   Campground.find({}, (err, campgrounds) => {
-      if(err) {
-          req.flash("error", err.message);
-      }else{
-          res.render("campgrounds/index", {campgrounds: campgrounds, currentUser: req.user, page: "campgrounds"});
-      }
-   });
+    if(req.query.search) {
+        const regex = new RegExp(escapeRegex(req.query.search), 'gi');
+        if(req.query.searchType === "name") {
+            Campground.find({name: req.query.search }, (err, campgrounds) => {
+              if(err) {
+                  req.flash("error", err.message);
+              }else{
+                  res.render("campgrounds/index", {campgrounds: campgrounds, currentUser: req.user, page: "campgrounds"});
+              }
+           });
+        }else if(req.query.searchType === "author"){
+             Campground.find({"author.username": req.query.search}, (err, campgrounds) => {
+              if(err) {
+                  req.flash("error", err.message);
+              }else{
+                  res.render("campgrounds/index", {campgrounds: campgrounds, currentUser: req.user, page: "campgrounds"});
+              }
+           });
+        }
+      
+    }else {
+    // Get campgrounds 
+         Campground.find({}, (err, campgrounds) => {
+          if(err) {
+              req.flash("error", err.message);
+          }else{
+              res.render("campgrounds/index", {campgrounds: campgrounds, currentUser: req.user, page: "campgrounds"});
+          }
+       });
+    }
 });
 
 //CREATE - add new campground to DB
-router.post("/", middleware.isLoggedIn, (req, res) => {
+router.post("/", middleware.isLoggedIn, upload.single('image'), (req, res) => {
   // get data from form and add to campgrounds array
   const name = req.body.name;
   const image = req.body.image;
@@ -45,15 +89,19 @@ router.post("/", middleware.isLoggedIn, (req, res) => {
     const location = data[0].formattedAddress;
     const newCampground = {name, image, description: desc, author, location, lat, lng};
     // Create a new campground and save to DB
-    Campground.create(newCampground, (err, newlyCreated) =>{
-        if(err){
-            console.log(err);
-        } else {
-            //redirect back to campgrounds page
-            console.log(newlyCreated);
-            res.redirect("/campgrounds");
-        }
+    cloudinary.uploader.upload(req.file.path, (result) => {
+        //add cloudinary url for the image to the campground object under image property 
+        newCampground.image = result.secure_url;
+        Campground.create(newCampground, (err, newlyCreated) =>{
+            if(err){
+                console.log(err);
+            } else {
+                //redirect back to campgrounds page
+                res.redirect("/campgrounds");
+            }
+        });
     });
+    
   });
 });
 
@@ -124,5 +172,10 @@ router.delete("/:id", middleware.checkCampgroundOwnership, (req, res) => {
         }
     })    
 });
+
+
+function escapeRegex(text) {
+    return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+};
 
 module.exports = router;

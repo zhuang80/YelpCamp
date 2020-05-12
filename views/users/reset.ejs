@@ -1,0 +1,21 @@
+<%- include("../partials/header") %>
+<div class="container">
+    <div class="row">
+        <div class="col-md-6 user-form">
+            <form action="/reset/<%= token %>" method="POST">
+                <div class="form-group">
+                    <label for="password">new password</label>
+                    <input type="password" name="password" placeholder="new password" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="confirm">confirm password</label>
+                    <input type="password" name="confirm" placeholder="confirm password" class="form-control">
+                </div>
+                <div class="form-group">
+                    <button class="btn btn-primary">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<%- include("../partials/footer") %>
