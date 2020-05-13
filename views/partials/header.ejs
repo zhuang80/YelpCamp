@@ -26,13 +26,15 @@
             </li>
           </ul>
           <% if(typeof page !== 'undefined' && page === 'campgrounds'){%>
-                <form action="/campgrounds" method="GET" class="form-inline "> 
-                    <select id="searchDropdown" class="custom-select form-control " name="searchType">
-                        <option selected value="name">Name</option>
-                        <option value="author">Author</option>
-                    </select>
-                    <input id="searchbar" class="form-control " type="text" name="search" placeholder="search">
-                     <button id="searchBtn" type="submit" class="btn btn-outline-success ml-0 my-2 my-sm-0">Search</button>
+                <form action="/campgrounds" method="GET" class="form-inline">
+                    <div class="d-flex align-items-stretch">
+                       <select id="searchDropdown" class="form-control " name="searchType">
+                            <option selected value="name">Name</option>
+                            <option value="author">Author</option>
+                        </select>
+                        <input id="searchbar" class="form-control " type="text" name="search" placeholder="search">
+                        <button id="searchBtn" type="submit" class="btn btn-outline-success form-control">Search</button>
+                   </div>
               </form>
           <% } %>
           
@@ -46,7 +48,28 @@
                       <a href="/register" class="nav-link">Sign Up</a>
                   </li>
               <% } else { %>
-                  <li class="nav-item"><a href="#" class="nav-link"><%= currentUser.username %></a></li>
+                  <li class="dropdown nav-item">
+                      <a href="#" class="dropdown-toggle nav-link" data-toggle="dropdown" role="button"
+                        aria-haspopup="true" aria-expanded="false">
+                          Notifications <span class="badge badge-pill badge-info""><%= typeof notifications !== "undefined" ? notifications.length : 0 %></span>
+                      </a>
+                      <% if(notifications) { %>
+                           <ul class="dropdown-menu">
+                              <li>
+                                  <a href="/notifications" >View past notifications</a>
+                              </li>
+                              <% notifications.forEach((notification) => { %>
+                                  <li>
+                                      <a href="/notifications/<%= notification.id %>">
+                                          <%= notification.username %> created a new campground
+                                      </a>
+                                  </li>
+                              <% })%>
+                          </ul>
+                      <% }%>
+                     
+                  </li>    
+                  <li class="nav-item"><a href="/users/<%= currentUser._id %>" class="nav-link"><%= currentUser.username %></a></li>
                   <li class="nav-item"><a href="/logout" class="nav-link">Logout</a></li>
               <% } %>
           </ul>
@@ -54,7 +77,7 @@
     
 </nav>
     
-    <div class="container">
+    <div class="container mt-3">
         <% if(error && error.length > 0 ) { %>
             <div class="alert alert-danger" role="alert"><%= error %></div>
         <% } %>

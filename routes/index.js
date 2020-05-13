@@ -5,10 +5,12 @@ const express = require("express"),
       nodemailer = require("nodemailer"),
       crypto = require("crypto"),
       { google } = require("googleapis"),
-      OAuth2 = google.auth.OAuth2;
+      OAuth2 = google.auth.OAuth2,
+      middleware = require("../middleware");;
 
 const User = require("../models/user"),
-      Campground = require("../models/campground");
+      Campground = require("../models/campground"),
+      Notification = require("../models/campground");
 const oauth2Client = new OAuth2(
     process.env.CLIENTID,
     process.env.CLIENTSECRET,
@@ -40,12 +42,14 @@ router.post("/register", (req, res) => {
         username: req.body.username,
         firstName: req.body.firstName,
         lastName: req.body.lastName,
-        avatar: req.body.avatar,
+        avatar: req.body.avatar || "https://smk.org.uk/wp-content/uploads/avatar.jpg",
         email: req.body.email,
     });
+    
     if(req.body.adminCode === "secretCode"){
         newUser.isAdmin = true;
     }
+    
     User.register(newUser, req.body.password, (err, user) =>{
         if(err) {
             req.flash("error", err.message);
@@ -255,20 +259,58 @@ router.post('/reset/:token', (req, res) => {
 
 
 //user profile route 
-router.get("/users/:id", (req, res) => {
-   User.findById(req.params.id, (err, foundUser) => {
-    if(err) {
-        req.flash("error", "Can't find the User");
+router.get("/users/:id", async (req, res) => {
+    try{
+       const user = await User.findById(req.params.id);
+       const campgrounds = await Campground.find().where("author.id").equals(user._id).exec();
+       res.render("users/show", {user, campgrounds});
+    }catch(err) {
+        req.flash("error", err.message);
+        res.redirect('back');
+    }
+});
+
+//follow user 
+router.get("/follow/:id", middleware.isLoggedIn, async (req, res) => {
+    try{
+        const user = await User.findById(req.params.id);
+        user.followers.push(req.user._id);
+        user.save();
+        req.flash("success", `Successfully followed ${user.username}!`);
+        res.redirect(`/users/${req.params.id}`);
+    } catch(err) {
+        req.flash("error", err.message);
+        res.redirect('back');
+    }
+});
+
+// view all notifications
+router.get("/notifications", middleware.isLoggedIn, async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id).populate({
+            path: 'notifications',
+            options: {sort: {"_id": -1}}
+        }).exec();
+        const allNotifications = user.notifications;
+        res.render("notifications/index", {allNotifications});
+    } catch(err) {
+        req.flash("error", err.message);
         res.redirect("back");
     }
-    Campground.find().where("author.id").equals(foundUser._id).exec((err, campgrounds) => {
-       if(err) {
-           req.flash("error", "Something went wrong");
-           res.redirect("back");
-       } 
-        res.render("users/show", {user: foundUser, campgrounds});
-    });
-   
-   }); 
 });
+
+//handle notification 
+router.get("/notifications/:id", middleware.isLoggedIn, async (req,res) => {
+    try{
+        const notification = await Notification.findById(req.params.id);
+        notification.isRead = true;
+        notification.save();
+        res.redirect(`/campgrounds/${notification.campgroundId}`);
+    } catch(err) {
+        req.flash("error", err.message);
+        res.redirect('back');
+    }
+});
+
+
 module.exports = router;

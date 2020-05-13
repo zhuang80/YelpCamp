@@ -1,18 +1,15 @@
 <%- include("../partials/header") %>
 
-<div class="container">
+<div class="container-fluid">
     <div class="row">
-        <div class="col-md-4">
-            <h1>User Profile</h1>
-            <h1><%= user.firstName + " "+ user.lastName %></h1>
-            <div class="thumbnail">
-                <img src="<%= user.avatar %>" alt="user profile image">
-                <div class="caption"><a href="mailto:<%= user.email %>"><%= user.email %></a></div>
+        <div class="col-md-3 border border-primary">
+            <div class="card">
+                <img  class="card-img-top" src="<%= user.avatar %>" alt="user profile image">
             </div>
-            
-           
+            <h2><%= user.firstName + " "+ user.lastName %></h2>
+            <button id="follow_button" class="btn active">Follow</button>
         </div>
-        <div class="col-md-8">
+        <div class="col-md-9 border border-primary">
             <% campgrounds.forEach((campground) => { %>
                 <li><a href="/campgrounds/<%= campground.id %>"><%= campground.name %></a></li>
             <% }) %>

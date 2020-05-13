@@ -36,7 +36,7 @@ passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
 
 
-//seedDB();
+// seedDB();
 
 //add middlewares 
 app.set("view engine", "ejs");
@@ -44,14 +44,25 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(methodOverride("_method"));
 app.use(express.static(__dirname + "/public"));
 app.use(flash());
-app.use(function(req, res, next) {
+app.use(async function(req, res, next) {
     //req.locals is accessable in all ejs templates
     //req.user is null if no user is logined otherwise hold the current user
     res.locals.currentUser = req.user;
+    res.locals.notifications = [];
+    if(req.user) {
+        try {
+            const user = await User.findById(req.user._id).populate('notifications', null, {isRead: false}).exec();
+            res.locals.notifications = user.notifications.reverse();
+        }catch(err) {
+            console.log(err.message);
+        }
+    }
+    
     res.locals.error = req.flash("error");
     res.locals.success = req.flash("success");
     next();
 })
+
 
 //require routers 
 const commentRoutes = require("./routes/comments"),
