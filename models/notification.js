@@ -9,4 +9,13 @@ const notificationSchema = new mongoose.Schema({
     }
 });
 
+
+notificationSchema.methods.toNotificationJSON = function(){
+  return {
+      username: this.username,
+      campgroundId: this.campgroundId,
+      isRead: this.isRead
+  };  
+};
+
 module.exports = mongoose.model("Notification", notificationSchema);

@@ -27,4 +27,28 @@ const userSchema = new mongoose.Schema({
 
 userSchema.plugin(passportLocalMongoose);
 
+
+userSchema.methods.follow = function(id){
+  if(this.followers.indexOf(id) === -1){
+    this.followers = this.followers.concat(id);
+  }
+  return this.save();
+};
+
+userSchema.methods.unfollow = function(id){
+  const idx = this.followers.indexOf(id);
+  console.log(idx);
+  this.followers.splice(idx, 1);
+  return this.save();
+};
+
+
+userSchema.methods.isFollowing = function(id){
+  return this.followers.some(function(followId){
+    return followId.toString() === id.toString();
+  });
+};
+
+
+
 module.exports = mongoose.model("User", userSchema);

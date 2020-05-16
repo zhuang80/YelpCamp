@@ -92,7 +92,7 @@ router.post("/", middleware.isLoggedIn, upload.single('image'), (req, res) => {
     const location = data[0].formattedAddress;
     const newCampground = {name, image, price, description: desc, author, location, lat, lng};
     // Create a new campground and save to DB
-    cloudinary.v2.uploader.upload(req.file.path, (err, result) => {
+    cloudinary.v2.uploader.upload(req.file.path, async (err, result) => {
         //add cloudinary url for the image to the campground object under image property 
         if(err) {
             req.flash("error", err.message);
@@ -100,31 +100,26 @@ router.post("/", middleware.isLoggedIn, upload.single('image'), (req, res) => {
         }
         newCampground.image = result.secure_url;
         newCampground.imageId = result.public_id;
-        
-        Campground.create(newCampground, (err, newlyCreated) =>{
-            if(err){
-                console.log(err);
-            } else {
-                //redirect back to campgrounds page
-                User.findById(req.user._id).populate('follower').exec((err, foundUser) => {
-                    if(err) console.error(err);
-                    const newNotification = {
-                        username: req.user.username,
-                        campgroundId: newlyCreated._id
-                    }
-                   
-                    Notification.create(newNotification, (err, newlyCreatedNotification) => {
-                         if(err) console.error(err);
-                         for(const follower of foundUser.followers) {
-                              follower.notifications.push(newlyCreatedNotification);
-                              follower.save();
-                         }
-                    })
-                
-                });
-                res.redirect("/campgrounds");
+        try {
+            const campground = await Campground.create(newCampground);
+            const user = await User.findById(req.user._id).populate("followers").exec();
+            const newNotification = {
+              username: req.user.username,
+              campgroundId: campground._id
+            };
+            
+            for(const follower of user.followers){
+                const notification = await Notification.create(newNotification);
+                follower.notifications.push(notification);
+                follower.save();
             }
-        });
+            
+            res.redirect(`/campgrounds/${campground._id}`);
+        }catch(err) {
+            req.flash("error", err.message);
+            res.redirect("back");
+        }
+       
     });
     
   });

@@ -55,12 +55,12 @@
                       </a>
                       <% if(notifications) { %>
                            <ul class="dropdown-menu">
-                              <li>
-                                  <a href="/notifications" >View past notifications</a>
+                              <li class="text-center py-2">
+                                  <a href="/notifications" class="text-left">View past notifications</a>
                               </li>
                               <% notifications.forEach((notification) => { %>
-                                  <li>
-                                      <a href="/notifications/<%= notification.id %>">
+                                  <li class="text-center border-top py-2">
+                                      <a href="/notifications/<%= notification._id%>">
                                           <%= notification.username %> created a new campground
                                       </a>
                                   </li>
@@ -69,7 +69,7 @@
                       <% }%>
                      
                   </li>    
-                  <li class="nav-item"><a href="/users/<%= currentUser._id %>" class="nav-link"><%= currentUser.username %></a></li>
+                  <li class="nav-item"><a href="/users/<%= currentUser._id %>/profile/campground" class="nav-link"><%= currentUser.username %></a></li>
                   <li class="nav-item"><a href="/logout" class="nav-link">Logout</a></li>
               <% } %>
           </ul>

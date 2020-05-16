@@ -22,7 +22,7 @@
                     <div class="card-text">
                            <p><%= campground.description %></p>
                             <p>
-                                <em>Created by: <a href="/users/<%= campground.author.id %>"><%= campground.author.username %></a>, <%= moment(campground.createdAt).fromNow() %></em>
+                                <em>Created by: <a href="/users/<%= campground.author.id %>/profile/campground"><%= campground.author.username %></a>, <%= moment(campground.createdAt).fromNow() %></em>
                             </p>
                             <% if(currentUser && campground.author.id.equals(currentUser._id) || currentUser && currentUser.isAdmin) {%>
                                 <a class="btn btn-warning" href="/campgrounds/<%= campground._id %>/edit">EDITE</a>

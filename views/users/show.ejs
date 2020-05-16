@@ -2,17 +2,56 @@
 
 <div class="container-fluid">
     <div class="row">
-        <div class="col-md-3 border border-primary">
+        <div class="col-md-3 border-primary">
             <div class="card">
                 <img  class="card-img-top" src="<%= user.avatar %>" alt="user profile image">
             </div>
-            <h2><%= user.firstName + " "+ user.lastName %></h2>
-            <button id="follow_button" class="btn active">Follow</button>
+            <h2 class="text-center"><%= user.firstName + " "+ user.lastName %></h2>
+            <% if(!currentUser._id.equals(user._id)) { %>
+                 <form action="/follow/<%= user._id%>" method="POST" class="d-flex justify-content-center">
+                     <button id="follow_button" class="btn <%= isFollowing ? "btn-primary" : "btn-default" %>">Follow</button>
+                </form>
+            <% }%>
+       
         </div>
-        <div class="col-md-9 border border-primary">
-            <% campgrounds.forEach((campground) => { %>
-                <li><a href="/campgrounds/<%= campground.id %>"><%= campground.name %></a></li>
-            <% }) %>
+        <div class="col-md-9 border-primary">
+            <ul class="nav nav-tabs">
+              <li class="nav-item">
+                <a id="my-post" class="nav-link <%= show === "campground" ? 'active' : ''%>" href="#">My Post</a>
+              </li>
+              <% if(currentUser._id.equals(user._id)){%>
+                   <li class="nav-item">
+                    <a id="notification" class="nav-link <%= show === "notification" ? 'active' : ''%>" href="#">Notification</a>
+                  </li>
+              <% }%>
+             
+              <li class="nav-item">
+                <a class="nav-link" href="#">Link</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true">Disabled</a>
+              </li>
+            </ul>
+            <div id="content-part"> 
+                <ul class='list-group list-group-flush'>
+                <% if(show === "campground") { %>
+                    <% campgrounds.forEach((campground) => { %>
+                        <li class="list-group-item"><a href="/campgrounds/<%= campground.id %>"><%= campground.name %></a></li>
+                     <% }) %>
+                <% }%>
+                <% if(show === "notification") { %>
+                    <% notifications.forEach((notification) => {%>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <a href="/notifications/<%= notification._id %>"><%= notification.username%> created a new post</a>
+                            <% if(!notification.isRead){ %>
+                                <span class="badge badge-pill badge-info d-line ml-5">new</span>
+                            <% }%>
+                        </li>
+                    <% })%>
+                <% } %>
+                </ul> 
+            </div>
+           
         </div>
     </div>
 </div>
