@@ -11,6 +11,7 @@ const userSchema = new mongoose.Schema({
     resetPasswordToken: String,
     resetPasswordExpires: Date,
     isAdmin: {type: Boolean, default: false},
+    isPaid: {type: Boolean, default: false},
     notifications: [
         {
             type: mongoose.Schema.Types.ObjectId,

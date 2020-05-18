@@ -39,6 +39,7 @@ const geocoder = NodeGeocoder(options);
 
 //INDEX ROUTE
 router.get("/", (req, res) => {
+    if(req.query.paid) res.locals.success = "Payment succeeded, welcome to YelpCamp";
     if(req.query.search) {
         const regex = new RegExp(escapeRegex(req.query.search), 'gi');
         if(req.query.searchType === "name") {

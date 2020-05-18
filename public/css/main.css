@@ -83,3 +83,31 @@ select {
 .dropdown-menu {
     min-width: 14rem;
 }
+
+/* stripe checkout form */
+
+.sr-main {
+    padding: 75px 50px;
+    background: rgba(247, 250, 249, 1);
+    width: 100%;
+    border-radius: 10px;
+    box-shadow: 0px 0px 0px 0.5px rgba(50, 50, 93, 0.1), 0px 2px 5px 0px rgba(50, 50, 93, 0.1), 0px 1px 1.5px 0px rgba(0, 0, 0, 0.07);
+}
+
+.sr-input{
+    vertical-align:middle;
+    border: 0;
+    border-radius: 5px;
+    padding: 12px 8px;
+    height: 44px;
+    width: 100%;
+    box-shadow: 0px 0px 0px 0.5px rgba(50, 50, 93, 0.1), 0px 2px 5px 0px rgba(50, 50, 93, 0.1), 0px 1px 1.5px 0px rgba(0, 0, 0, 0.07);
+    background: white;
+    -moz-appearance: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.hidden {
+    display: none;
+}

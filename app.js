@@ -40,6 +40,7 @@ passport.deserializeUser(User.deserializeUser());
 
 //add middlewares 
 app.set("view engine", "ejs");
+app.use(express.json());
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(methodOverride("_method"));
 app.use(express.static(__dirname + "/public"));
@@ -74,6 +75,7 @@ app.use("/campgrounds/:id/comments", commentRoutes);
 app.use("/campgrounds",campgroundRoutes);
 
 
-app.listen(process.env.PORT, () => {
+app.listen(process.env.PORT || 4000 , () => {
+    console.log(process.env.NODE_ENV);
     console.log(`The server is running on port ${process.env.PORT}.`);
 });

@@ -1,0 +1,123 @@
+<%- include("partials/header") %>
+
+<div class="container my-5">
+    <div class="row">
+        <div class="col-md-8 col-lg-6 m-auto sr-main">
+            <h3>Payment</h3>
+            <form id="payment-form">
+              <div id="card-element" class="form-group sr-input">
+                
+                      <!-- Elements will create input elements here -->
+                  
+                
+              </div>
+            
+              <!-- We'll put the error messages in this element -->
+              <div id="card-errors" role="alert"></div>
+            
+               <button id="submit" class="btn-block btn btn-primary btn-sm px-4">
+               <div class="spinner-border spinner-border-sm hidden" id="spinner" role="status">
+                  <span class="sr-only">Loading...</span>
+                </div>
+                <span id="button-text">Pay Now</span><span id="order-amount"></span>
+              </button>
+              
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<script>
+     var orderData = {
+      items: [{ id: "yelp_camp_membership_fee" }],
+      currency: "usd"
+    };
+    
+    
+    // Set your publishable key: remember to change this to your live publishable key in production
+    // See your keys here: https://dashboard.stripe.com/account/apikeys
+    var stripe = Stripe("<%=publishableKey%>");
+    var elements = stripe.elements();
+    // Set up Stripe.js and Elements to use in checkout form
+    var style = {
+          base: {
+          color: "#32325d",
+          fontFamily: '"Helvetica Neue", Helvetica, sans-serif',
+          fontSmoothing: "antialiased",
+          fontSize: "16px",
+          "::placeholder": {
+            color: "#aab7c4"
+          }
+        },
+        invalid: {
+          color: "#fa755a",
+          iconColor: "#fa755a"
+        }
+    };
+    //mount card input elements under element #card-element 
+    var card = elements.create("card", { style: style });
+    card.mount("#card-element");
+    
+    card.addEventListener('change', ({error}) => {
+      const displayError = document.getElementById('card-errors');
+      if (error) {
+        displayError.textContent = error.message;
+      } else {
+        displayError.textContent = '';
+      }
+    });
+    
+    var form = document.getElementById('payment-form');
+
+    form.addEventListener('submit', function(ev) {
+      ev.preventDefault();
+      changeLoadingState(true);
+      stripe
+        .createPaymentMethod("card", card)
+        .then(function(result) {
+          if (result.error) {
+            $('#card-errors').text(result.error.message);
+          } else {
+            orderData.paymentMethodId = result.paymentMethod.id;
+            //Jquery AJAX-like request
+            return fetch("/pay", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify(orderData)
+            });
+          }
+        })
+        .then(function(result) {
+          return result.json();
+        })
+        .then(function(response) {
+          if (response.error) {
+             $('#card-errors').text(result.error.message);
+          } else {
+            changeLoadingState(false);
+            window.location.href = "/campgrounds?paid=true";
+          }
+        });
+      
+    });
+    
+    
+    // Show a spinner on payment submission
+var changeLoadingState = function(isLoading) {
+  if (isLoading) {
+    document.querySelector("button").disabled = true;
+    document.querySelector("#spinner").classList.remove("hidden");
+    document.querySelector("#button-text").classList.add("hidden");
+  } else {
+    document.querySelector("button").disabled = false;
+    document.querySelector("#spinner").classList.add("hidden");
+    document.querySelector("#button-text").classList.remove("hidden");
+  }
+};
+
+</script>
+
+<%- include("partials/footer") %>
